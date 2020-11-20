@@ -1,6 +1,7 @@
-###Installation:
+### Installation:
 `pip install .`
-###Prerequisites:
+  
+### Prerequisites:
 you will need following certificates in your workdir:
  * for Kafka service:
    * `ca.pem`
@@ -16,10 +17,10 @@ also you will have to export following environment variables:
  * `DB_URL={full database url with username, password, port, db name and ssl mode true}`
  * `SERVICE_URI={kafka host}:{kafka port}`
 
-###Usage:
-#####Run producer:
+### Usage:
+##### Run producer:
 `$ fomars-kafka-producer`
-#####Run consumer:
+##### Run consumer:
 `$ fomars-kafka-consumer`
-#####Stop:
+##### Stop:
 Ctrl+C or SIGINT
