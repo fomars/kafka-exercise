@@ -4,8 +4,6 @@ import os
 import psycopg2
 from contextlib import closing
 
-from common import Data
-
 uri = os.getenv('DB_URL')
 
 

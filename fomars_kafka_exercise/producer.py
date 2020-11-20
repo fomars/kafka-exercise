@@ -1,5 +1,4 @@
 import argparse
-import json
 import os
 import re
 import signal
@@ -10,7 +9,7 @@ from threading import Thread, Event
 import requests
 from kafka import KafkaProducer
 
-from common import Data
+from .common import Data, env_check
 
 
 def kafka_producer(queue, period):
@@ -103,7 +102,7 @@ def set_interrupt_handler(stop_event, pollers, queue, results_sender):
     signal.signal(signal.SIGTERM, interrupt_handler)
 
 
-def main(url, period, timeout, regex):
+def run(url, period, timeout, regex):
     results_queue = Queue()
     stop = Event()
     results_sender = Thread(target=kafka_producer, args=(results_queue, period))
@@ -121,11 +120,16 @@ def main(url, period, timeout, regex):
         poller.start()
 
 
-if __name__ == '__main__':
+def main():
+    env_check()
     parser = argparse.ArgumentParser()
     parser.add_argument('url')
     parser.add_argument('-p', '--period', type=int, help='Poll period in seconds', default=2)
     parser.add_argument('-t', '--timeout', type=int, help='Timeout in seconds', default=10)
     parser.add_argument('-r', '--regex')
     args = parser.parse_args()
-    main(args.url, args.period, args.timeout, args.regex)
+    run(args.url, args.period, args.timeout, args.regex)
+
+
+if __name__ == '__main__':
+    main()
