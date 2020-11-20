@@ -10,6 +10,8 @@ from threading import Thread, Event
 import requests
 from kafka import KafkaProducer
 
+from common import Data
+
 
 def kafka_producer(queue, period):
     """
@@ -25,12 +27,12 @@ def kafka_producer(queue, period):
     )
     while True:
         try:
-            data_dict = queue.get(timeout=period)
+            data = queue.get(timeout=period)
         except Empty:
             continue
-        if data_dict is not None:
-            print('Sending {}'.format(data_dict))
-            producer.send('website_availability', json.dumps(data_dict).encode('utf-8'))
+        if data is not None:  # use None to terminate thread
+            print(f'Sending {data}')
+            producer.send('website_availability', data.dumps())
             producer.flush()
         else:
             break
@@ -71,18 +73,21 @@ class Poller(Thread):
             self.results_queue.put(self.check_website())
 
     def check_website(self):
+        """
+
+        :rtype: Data
+        """
         ts = time.time()
         try:
             resp = requests.get(self.url, timeout=self.timeout)
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
-            return {'ts': ts,
-                    'response_time_ms': time.time() - ts,
-                    'http_code': 0,
-                    'regex_matches': []}
-        return {'ts': ts,
-                'response_time_ms': resp.elapsed.total_seconds() * 1000,
-                'http_code': resp.status_code,
-                'regex_matches': re.findall(self.regex_b, resp.content) if self.regex_b else []}
+            return Data(self.url, ts,
+                        int((time.time() - ts) * 1000),
+                        0, False)  # zero http code - a convention for ConnectionError
+        return Data(self.url, ts,
+                    int(resp.elapsed.total_seconds() * 1000),
+                    resp.status_code,
+                    re.search(self.regex_b, resp.content) is not None if self.regex_b else False)
 
 
 def set_interrupt_handler(stop_event, pollers, queue, results_sender):
@@ -91,7 +96,7 @@ def set_interrupt_handler(stop_event, pollers, queue, results_sender):
         stop_event.set()
         for poller in pollers:
             poller.join()
-        queue.put(None)
+        queue.put(None)  # use None to terminate results sender thread
         results_sender.join()
 
     signal.signal(signal.SIGINT, interrupt_handler),
@@ -105,6 +110,7 @@ def main(url, period, timeout, regex):
     results_sender.start()
     scheduler = get_scheduler(period)
 
+    # should have enough pollers to keep poll period constant even if target url times out
     pollers_number = timeout // period or 1
     pollers = [Poller(url, timeout, scheduler, stop, results_queue, regex) for i in
                range(pollers_number)]
