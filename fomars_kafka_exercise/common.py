@@ -6,7 +6,7 @@ BaseData = namedtuple('Data', ['url', 'ts', 'response_time_ms', 'http_code', 're
 
 
 def env_check(var_name='SERVICE_URI'):
-    assert os.getenv(var_name) is not None, 'You must set SERVICE_URI environment variable'
+    assert os.getenv(var_name) is not None, f'You must set {var_name} environment variable'
 
 class Data(BaseData):
     def dumps(self):
